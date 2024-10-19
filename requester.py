@@ -9,6 +9,10 @@ _ETF_HEADERS = ['股票代碼', '股票名稱', '權重']
 _STATISTICS_HEADERS = ['代號', '名稱', '次數', '百分比', '最大權重ETF',
                        '最大權重', '最小權重ETF', '最小權重', '平均權重']
 
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+}
+
 
 class ETFRequester:
     def __init__(self, etfs):
@@ -75,7 +79,6 @@ class ETFRequester:
             return None
         return float_weight
 
-
     def clear(self):
         self.stock_dict = {}
         self.stock_max_weight_dict = {}
@@ -87,6 +90,10 @@ class ETFRequester:
         for etf in self.etfs:
             self.print_etf_message(etf, index)
             soup = self.request_etf_data(etf)
+            if not soup:
+                index += 1
+                time.sleep(3)
+                continue
             weights = soup.findAll('td', 'col06')
             worksheet = self.workbook.add_worksheet(etf)
             self.write_worksheet(worksheet, 0, _ETF_HEADERS)
@@ -109,7 +116,6 @@ class ETFRequester:
                     row += 1
                 stock_index += 1
             index += 1
-            # 不要頻繁請求
             time.sleep(3)
 
     def print_etf_message(self, etf, index):
@@ -118,7 +124,11 @@ class ETFRequester:
 
     def request_etf_data(self, etf):
         url = self.base_url + etf + '.TW'
-        request = requests.get(url)
+        try:
+            request = requests.get(url, headers=headers)
+        except (requests.exceptions.RequestException, Exception) as e:
+            self.callback_print_message('發生異常, 請求' + etf + '資料失敗\n')
+            return None
         request.encoding = 'utf-8'
         soup = BeautifulSoup(request.text, "html.parser")
         return soup
