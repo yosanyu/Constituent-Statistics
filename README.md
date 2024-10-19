@@ -40,4 +40,4 @@ https://www.moneydj.com/robots.txt
 ![](example1.PNG)
 ![](example2.PNG)
 ![](example3.PNG)
-<iframe width="560" height="315" src="https://github.com/yosanyu/Taiwan-ETF-Constituent-Statistics/blob/master/openfile.mp4" frameborder="0" allowfullscreen></iframe>
+![](openfile.gif)
