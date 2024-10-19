@@ -36,3 +36,9 @@ class ETFLoader:
             title = self.etf_codes[index][i] + ' ' + self.etf_names[index][i]
             titles.append(title)
         return titles
+
+    def has_etf(self, etf):
+        for etfs in self.etf_codes:
+            if etf in etfs:
+                return True
+        return False

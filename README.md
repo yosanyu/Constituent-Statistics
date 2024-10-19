@@ -18,11 +18,10 @@ https://www.moneydj.com/robots.txt
 5.新增新的etf  
 6.將開發金更名成凱基金  
 7.輸出檔案記錄新增每個etf的內容及增加平均權重  
+8.選取一個寫有etf的txt檔案後請求資料(參考etf_list.txt)  
 
 ## 還能怎麼擴充?
-1.如股息系列，新增其他主題類型  
-2.選取一個寫有etf的txt檔案後請求資料  
-
+1.如股息系列，新增其他主題類型
 
 ## 有哪些物件
 ### 目前專案撰寫了6個物件
@@ -41,3 +40,4 @@ https://www.moneydj.com/robots.txt
 ![](example1.PNG)
 ![](example2.PNG)
 ![](example3.PNG)
+<iframe width="560" height="315" src="openfile.mp4" frameborder="0" allowfullscreen></iframe>
