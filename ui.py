@@ -9,11 +9,12 @@ from PySide6.QtWidgets import QComboBox
 from PySide6.QtWidgets import QPlainTextEdit
 from PySide6.QtWidgets import QFileDialog
 
-
 _DIVIDEND_ETFS = ['0056', '00701', '00713', '00730', '00731', '00878', '00900',
                   '00907', '00915', '00918', '00919', '00927', '00929', '00930',
                   '00932', '00934', '00936', '00939', '00940', '00943', '00944',
                   '00946', '00961']
+
+_BUTTON_TEXTS = ['新增', '確認', '重置', '股息系列', '選擇文件']
 
 
 class WorkerThread(QThread):
@@ -49,6 +50,7 @@ class MainWindow(QMainWindow):
         self.button_clear = None
         self.button_dividends = None
         self.button_open_file = None
+        self.buttons = []
         self.combobox_etf_issuer = None
         self.combobox_etf_title = None
         self.plain_text_edit = None
@@ -60,7 +62,7 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         self.resize(1600, 900)
         self.setFixedSize(1600, 900)
-        self.setWindowTitle("Constituent Statistics")
+        self.setWindowTitle('Constituent Statistics')
 
     def init_widget(self):
         self.init_button()
@@ -80,6 +82,8 @@ class MainWindow(QMainWindow):
         self.button_clear = QPushButton(self)
         self.button_dividends = QPushButton(self)
         self.button_open_file = QPushButton(self)
+        self.buttons = [self.button_add, self.button_confirm, self.button_clear,
+                        self.button_dividends, self.button_open_file]
 
     def set_button_location(self):
         self.button_add.setGeometry(1200, 50, 100, 50)
@@ -89,20 +93,14 @@ class MainWindow(QMainWindow):
         self.button_open_file.setGeometry(1390, 120, 150, 50)
 
     def set_button_text(self):
-        self.button_add.setText("新增")
-        self.button_confirm.setText("確認")
-        self.button_clear.setText("重置")
-        self.button_dividends.setText('股息系列')
-        self.button_open_file.setText('選擇文件')
+        for index, button in enumerate(self.buttons):
+            button.setText(_BUTTON_TEXTS[index])
 
     def set_button_font(self):
         font = self.button_add.font()
         font.setPointSize(20)
-        self.button_add.setFont(font)
-        self.button_confirm.setFont(font)
-        self.button_clear.setFont(font)
-        self.button_dividends.setFont(font)
-        self.button_open_file.setFont(font)
+        for button in self.buttons:
+            button.setFont(font)
 
     def bind_button_clicked(self):
         self.button_add.clicked.connect(self.on_button_add_clicked)
@@ -112,16 +110,31 @@ class MainWindow(QMainWindow):
         self.button_open_file.clicked.connect(self.on_button_open_file_clicked)
 
     def init_combobox(self):
+        self.create_combobox()
+        self.set_combobox_location()
+        self.set_combobox_items()
+        self.set_combobox_font()
+        self.bind_combobox_current_index_changed()
+
+    def create_combobox(self):
         self.combobox_etf_issuer = QComboBox(self)
         self.combobox_etf_title = QComboBox(self)
+
+    def set_combobox_location(self):
         self.combobox_etf_issuer.setGeometry(50, 50, 250, 50)
         self.combobox_etf_title.setGeometry(350, 50, 800, 50)
+
+    def set_combobox_items(self):
         self.combobox_etf_issuer.addItems(self.etf_loader.etf_issuers)
-        self.combobox_etf_title.addItems(self.etf_loader.get_title(0))
+        self.combobox_etf_title.addItems(self.etf_loader.get_titles(0))
+
+    def set_combobox_font(self):
         font = self.combobox_etf_issuer.font()
         font.setPointSize(20)
         self.combobox_etf_issuer.setFont(font)
         self.combobox_etf_title.setFont(font)
+
+    def bind_combobox_current_index_changed(self):
         self.combobox_etf_issuer.currentIndexChanged.connect(self.etf_issuer_changed)
 
     def init_plain_text_edit(self):
@@ -134,10 +147,7 @@ class MainWindow(QMainWindow):
         self.plain_text_edit.show()
 
     def set_button_is_enable(self, enable):
-        buttons = [self.button_add, self.button_confirm,
-                   self.button_clear, self.button_dividends,
-                   self.button_open_file]
-        for button in buttons:
+        for button in self.buttons:
             button.setEnabled(enable)
 
     def on_button_add_clicked(self):
@@ -146,8 +156,9 @@ class MainWindow(QMainWindow):
         etf_code = self.etf_loader.etf_codes[etf_issuer_index][etf_code_index]
         if etf_code not in self.etfs:
             self.etfs.append(etf_code)
-            message = '已新增{}進入統計\n'.format(etf_code)
-            self.add_plain_text(message)
+            self.add_plain_text(f'已新增{etf_code}進入統計\n')
+        else:
+            self.add_plain_text(f'{etf_code}已被加入統計\n')
 
     def on_button_confirm_clicked(self):
         if len(self.etfs) > 0:
@@ -171,17 +182,16 @@ class MainWindow(QMainWindow):
         for etf in _DIVIDEND_ETFS:
             if etf not in self.etfs:
                 self.etfs.append(etf)
-                message = '已新增{}進入統計\n'.format(etf)
-                self.add_plain_text(message)
+                self.add_plain_text(f'已新增{etf}進入統計\n')
         self.on_button_confirm_clicked()
 
     def on_button_open_file_clicked(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "選擇 .txt 文件", "", "文本文件 (*.txt)")
         if file_path:
-            self.add_plain_text(f"選擇的文件路徑: {file_path}\n")
+            self.add_plain_text(f'選擇的文件路徑: {file_path}\n')
             self.load_txt_file(file_path)
         else:
-            self.add_plain_text("未選擇任何文件\n")
+            self.add_plain_text('未選擇任何文件\n')
 
     def load_txt_file(self, file):
         try:
@@ -190,13 +200,11 @@ class MainWindow(QMainWindow):
                 self.on_button_clear_clicked()
                 self.set_button_is_enable(False)
                 num = 0
-                for etf in content:
-                    if etf not in self.etfs:
-                        if self.etf_loader.has_etf(etf):
-                            self.etfs.append(etf)
-                            message = '已新增{}進入統計\n'.format(etf)
-                            self.add_plain_text(message)
-                            num += 1
+                for etf in set(content):
+                    if etf not in self.etfs and self.etf_loader.has_etf(etf):
+                        self.etfs.append(etf)
+                        self.add_plain_text(f'已新增{etf}進入統計\n')
+                        num += 1
                 if num > 0:
                     self.on_button_confirm_clicked()
                 else:
@@ -208,7 +216,7 @@ class MainWindow(QMainWindow):
 
     def etf_issuer_changed(self, index):
         self.combobox_etf_title.clear()
-        self.combobox_etf_title.addItems(self.etf_loader.get_title(index))
+        self.combobox_etf_title.addItems(self.etf_loader.get_titles(index))
 
     def add_plain_text(self, text):
         self.plain_text += text

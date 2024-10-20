@@ -14,31 +14,17 @@ class ETFLoader:
 
     def load_xlsx(self):
         project_path = os.getcwd()
-        path = Path(project_path) / 'etf_issuer'
-        os.chdir(path)
-        workbook = openpyxl.load_workbook(_FILENAME)
+        file_path = Path(project_path) / 'etf_issuer' / _FILENAME
+        workbook = openpyxl.load_workbook(file_path)
         for sheet_name in workbook.sheetnames:
             self.etf_issuers.append(sheet_name)
             sheet = workbook[sheet_name]
-            codes = []
-            names = []
-            for row in sheet.iter_rows(values_only=True):
-                codes.append(row[0])
-                names.append(row[1])
+            codes, names = zip(*[(row[0], row[1]) for row in sheet.iter_rows(values_only=True)])
             self.etf_codes.append(codes)
             self.etf_names.append(names)
-        os.chdir(project_path)
 
-    def get_title(self, index):
-        titles = []
-        size = len(self.etf_codes[index])
-        for i in range(size):
-            title = self.etf_codes[index][i] + ' ' + self.etf_names[index][i]
-            titles.append(title)
-        return titles
+    def get_titles(self, index):
+        return [f'{code} {name}' for code, name in zip(self.etf_codes[index], self.etf_names[index])]
 
     def has_etf(self, etf):
-        for etfs in self.etf_codes:
-            if etf in etfs:
-                return True
-        return False
+        return any(etf in etfs for etfs in self.etf_codes)

@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import time
+import os
 
 _FILENAME = 'ETF_Statistics.xlsx'
 _ETF_HEADERS = ['股票代碼', '股票名稱', '權重']
@@ -10,8 +11,20 @@ _STATISTICS_HEADERS = ['代號', '名稱', '次數', '百分比', '最大權重E
                        '最大權重', '最小權重ETF', '最小權重', '平均權重']
 
 headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
 }
+
+
+def sleep():
+    time.sleep(3)
+
+
+def avoid_weight_except(weight):
+    try:
+        float_weight = float(weight)
+    except ValueError:
+        return None
+    return float_weight
 
 
 class ETFRequester:
@@ -35,49 +48,38 @@ class ETFRequester:
         self.write_statistics_data()
         self.workbook.close()
         self.clear()
-        self.callback_print_message(_FILENAME + '文件已保存')
+        self.callback_print_message(_FILENAME + '文件已保存\n')
+        self.callback_print_message('自動開啟文件' + _FILENAME + '中...\n')
         self.callback_end(True)
+        try:
+            os.startfile(_FILENAME)
+        except Exception as e:
+            self.callback_print_message('自動開啟文件' + _FILENAME + '失敗\n')
 
     def set_weight(self, key, etf, weight):
         self.update_max_weight(key, etf, weight)
         self.update_min_weight(key, etf, weight)
-        self.update_average_weight(key, etf, weight)
+        self.update_average_weight(key, weight)
 
     def update_max_weight(self, key, etf, weight):
-        float_weight = self.avoid_weight_except(weight)
+        float_weight = avoid_weight_except(weight)
         if float_weight:
-            if key in self.stock_max_weight_dict.keys():
-                max_weight = self.stock_max_weight_dict.get(key)
-                if float_weight > max_weight[1]:
-                    self.stock_max_weight_dict[key] = (etf, float_weight)
-            else:
+            _, max_weight = self.stock_max_weight_dict.get(key, (None, float('-1.0')))
+            if float_weight > max_weight:
                 self.stock_max_weight_dict[key] = (etf, float_weight)
 
     def update_min_weight(self, key, etf, weight):
-        float_weight = self.avoid_weight_except(weight)
+        float_weight = avoid_weight_except(weight)
         if float_weight:
-            if key in self.stock_min_weight_dict.keys():
-                min_weight = self.stock_min_weight_dict.get(key)
-                if float(weight) < min_weight[1]:
-                    self.stock_min_weight_dict[key] = (etf, float_weight)
-            else:
+            _, min_weight = self.stock_min_weight_dict.get(key, (None, float('inf')))
+            if float_weight < min_weight:
                 self.stock_min_weight_dict[key] = (etf, float_weight)
 
-    def update_average_weight(self, key, etf, weight):
-        float_weight = self.avoid_weight_except(weight)
+    def update_average_weight(self, key, weight):
+        float_weight = avoid_weight_except(weight)
         if float_weight:
-            if key in self.stock_average_weight_dict.keys():
-                total_weight, count = self.stock_average_weight_dict[key]
-                self.stock_average_weight_dict[key] = (total_weight + float_weight, count + 1)
-            else:
-                self.stock_average_weight_dict[key] = (float_weight, 1)
-
-    def avoid_weight_except(self, weight):
-        try:
-            float_weight = float(weight)
-        except ValueError:
-            return None
-        return float_weight
+            total_weight, count = self.stock_average_weight_dict.get(key, (0.0, 0))
+            self.stock_average_weight_dict[key] = (total_weight + float_weight, count + 1)
 
     def clear(self):
         self.stock_dict = {}
@@ -86,20 +88,16 @@ class ETFRequester:
         self.stock_average_weight_dict = {}
 
     def write_etf_data(self):
-        index = 1
-        for etf in self.etfs:
+        for index, etf in enumerate(self.etfs, start=1):
             self.print_etf_message(etf, index)
             soup = self.request_etf_data(etf)
             if not soup:
-                index += 1
-                time.sleep(3)
+                sleep()
                 continue
             weights = soup.findAll('td', 'col06')
             worksheet = self.workbook.add_worksheet(etf)
             self.write_worksheet(worksheet, 0, _ETF_HEADERS)
-            stock_index = 0
-            row = 1
-            for stock in soup.findAll('td', 'col05'):
+            for stock_index, stock in enumerate(soup.findAll('td', 'col05')):
                 content = stock.find('a')
                 text = content.get('href')
                 match = re.findall('[0-9]+', text)
@@ -112,14 +110,11 @@ class ETFRequester:
                     name = self.callback_get_stock(key)
                     cols = [key, name, weight]
                     for col, value in enumerate(cols):
-                        worksheet.write(row, col, value, self.bold_format)
-                    row += 1
-                stock_index += 1
-            index += 1
-            time.sleep(3)
+                        worksheet.write(stock_index+1, col, value, self.bold_format)
+            sleep()
 
     def print_etf_message(self, etf, index):
-        message = '正在請求{}的成分股中... 進度 {}/{}\n'.format(etf, str(index), self.string_len)
+        message = f'正在請求{etf}的成分股中... 進度 {index}/{self.string_len}\n'
         self.callback_print_message(message)
 
     def request_etf_data(self, etf):
@@ -139,11 +134,8 @@ class ETFRequester:
 
     def set_stock_times(self, key):
         # 個股代號為4碼
-        if key in self.stock_dict.keys() and len(key) == 4:
-            num = self.stock_dict.get(key)
-            self.stock_dict[key] = num + 1
-        else:
-            self.stock_dict[key] = 1
+        if len(key) == 4:
+            self.stock_dict[key] = self.stock_dict.get(key, 0) + 1
 
     def write_statistics_data(self):
         worksheet = self.workbook.add_worksheet('統計')
@@ -156,9 +148,8 @@ class ETFRequester:
             if value == 1:
                 row += 1
                 continue
-            str_value = str(value)
-            count = str_value + '/' + self.string_len
-            percentage = str(round(value / self.len * 100, 2)) + '%'
+            count = f'{value}/{self.string_len}'
+            percentage = f'{round(value / self.len * 100, 2)}%'
             name = self.callback_get_stock(key)
             max_weight, min_weight = self.stock_max_weight_dict.get(key), self.stock_min_weight_dict.get(key)
             average_weight = self.stock_average_weight_dict.get(key)[0] / self.stock_average_weight_dict.get(key)[1]

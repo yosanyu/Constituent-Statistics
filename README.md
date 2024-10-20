@@ -19,6 +19,7 @@ https://www.moneydj.com/robots.txt
 6.將開發金更名成凱基金  
 7.輸出檔案記錄新增每個etf的內容及增加平均權重  
 8.選取一個寫有etf的txt檔案後請求資料(參考etf_list.txt)  
+9.自動開啟生成的xlsx檔案
 
 ## 還能怎麼擴充?
 1.如股息系列，新增其他主題類型
